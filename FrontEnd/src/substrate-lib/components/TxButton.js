@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { Button } from 'semantic-ui-react';
 import { web3FromSource } from '@polkadot/extension-dapp';
-
+import { Abi, ContractPromise } from "@polkadot/api-contract";
 import { useSubstrate } from '../';
 import utils from '../utils';
-
+import tokenMetadata from "../../metadata.json";
 function TxButton ({
   accountPair = null,
   label,
@@ -33,7 +33,7 @@ function TxButton ({
 
   const loadSudoKey = () => {
     (async function () {
-      if (!api || !api.query.sudo) { return; }
+      if (!api) { return; }
       const sudoKey = await api.query.sudo.key();
       sudoKey.isEmpty ? setSudoKey(null) : setSudoKey(sudoKey.toString());
     })();
@@ -93,16 +93,27 @@ function TxButton ({
 
   const signedTx = async () => {
     const fromAcct = await getFromAcct();
-    const transformed = transformParams(paramFields, inputParams);
-    // transformed can be empty parameters
+    const transferTo = inputParams[0];
+    const amount = inputParams[1];
+    const abi = new Abi(tokenMetadata);
 
-    const txExecute = transformed
-      ? api.tx[palletRpc][callable](...transformed)
-      : api.tx[palletRpc][callable]();
+    const address = "5D8spzHimqG6Gvr4WLVeTP1bGGwuF5bZhmKbtJ1bCiEd7ADy";
+    const contract = new ContractPromise(api, abi, address);
+    const value = 0;
+    const gasLimit = 100000000000;
+    await contract.tx
+      .transfer(value, gasLimit, transferTo,amount)
+      .signAndSend(fromAcct, (result) => {
+        if (result.status.isInBlock) {
+          console.log('in a block');
+        } else if (result.status.isError) {
+          console.log(result);
+          console.log('Error');
+        } else if (result.status.isFinalized) {
+          console.log('finalized');
+        }
+      });
 
-    const unsub = await txExecute.signAndSend(fromAcct, txResHandler)
-      .catch(txErrHandler);
-    setUnsub(() => unsub);
   };
 
   const unsignedTx = async () => {

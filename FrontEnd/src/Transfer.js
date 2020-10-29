@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Form, Input, Grid, Label, Icon } from 'semantic-ui-react';
 import { TxButton } from './substrate-lib/components';
 
+
 export default function Main (props) {
   const [status, setStatus] = useState(null);
   const [formState, setFormState] = useState({ addressTo: null, amount: 0 });
